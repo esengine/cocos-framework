@@ -1,0 +1,60 @@
+// Effect Syntax Guide: https://github.com/cocos-creator/docs-3d/blob/master/zh/material-system/effect-syntax.md
+
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: general-vs:vert # builtin header
+      frag: unlit-fs:frag
+      properties: &props
+        s0:    { value: white }
+        # _normalMapSampler: {value: white}
+        color:      { value: [1, 1, 1, 1], editor: { type: color } }
+        # _alphaCutoff: {value: [1, 1, 1, 1]}
+        # _alphaAsSelfIllumination: {value: 1}
+        # _selfIlluminationPower: {value: 1}
+  - name: transparent
+    passes:
+    - vert: general-vs:vert # builtin header
+      frag: unlit-fs:frag
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties: *props
+}%
+
+CCProgram unlit-fs %{
+  precision mediump float;
+
+  in vec2 v_uv;
+  uniform sampler2D s0;
+  uniform sampler2D _normalMapSampler;
+  
+  float _alphaCutoff;
+  float _alphaAsSelfIllumination;
+  float _selfIlluminationPower;
+
+  vec4 normal;
+
+  uniform Constant {
+    vec4 color;
+  };
+
+  vec4 frag () {
+    vec4 col = color;
+      // 将漫反射输出到颜色纹理中
+      col = color * texture(s0, v_uv);
+
+      // 如果aplha测试不通过就返回
+      if (color.w < _alphaCutoff) discard;
+
+    // 将法线贴图输出到法线纹理。alpha通道用于自发光，1完全自发光，0没有自发光
+    normal = texture(_normalMapSampler, v_uv);
+    normal.w *= _alphaAsSelfIllumination * _selfIlluminationPower;
+    return col;
+  }
+}%

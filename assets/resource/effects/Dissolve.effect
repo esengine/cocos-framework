@@ -1,0 +1,64 @@
+// Effect Syntax Guide: https://github.com/cocos-creator/docs-3d/blob/master/zh/material-system/effect-syntax.md
+
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: general-vs:vert # builtin header
+      frag: unlit-fs:frag
+      properties: &props
+        _dissolveTexSampler:    { value: white }
+        mainColor:      { value: [1, 1, 1, 1], editor: { type: color } }
+  - name: transparent
+    passes:
+    - vert: general-vs:vert # builtin header
+      frag: unlit-fs:frag
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties: *props
+}%
+
+CCProgram unlit-fs %{
+  precision highp float;
+
+  in vec2 v_uv;
+  uniform sampler2D _dissolveTexSampler;
+  float _progress;
+  float _dissolveThreshold;
+  vec4 _dissolveThresholdColor;
+
+  uniform Constant {
+    vec4 mainColor;
+  };
+
+  float saturate(float i) {
+    return clamp(i, 0.0, 1.0);
+  }
+
+  vec4 lerp(vec4 from, vec4 to, float t) {
+    return from + (to - from) * t;
+  }
+
+  float lerp1(float from, float to, float t) {
+    return from + (to - from) * t;
+  }
+
+  vec4 frag () {
+    float progress = _progress + _dissolveThreshold;
+    vec4 color = texture(_dissolveTexSampler, v_uv);
+
+    float dissolveAmount = 1.0 - texture( _dissolveTexSampler, v_uv ).r;
+    if( dissolveAmount < progress - _dissolveThreshold )
+		  discard;
+
+    bool b = dissolveAmount < progress;
+	  float colorAmount = lerp1( 1.0, 0.0, 1.0 - saturate( abs( progress - _dissolveThreshold - dissolveAmount ) / _dissolveThreshold ) );
+    vec4 thresholdColor = lerp( vec4(0, 0, 0, 1), _dissolveThresholdColor, colorAmount);
+    return lerp(color, color * thresholdColor, b);
+  }
+}%
