@@ -8,8 +8,6 @@ CCEffect %{
       frag: unlit-fs:frag
       properties: &props
         s0:    { value: white }
-        color:      { value: [1, 1, 1, 1], editor: { type: color } }
-        _alphaCutoff: {value: 0.0}
   - name: transparent
     passes:
     - vert: general-vs:vert # builtin header
@@ -30,17 +28,11 @@ CCProgram unlit-fs %{
   in vec2 v_uv;
   uniform sampler2D s0;
 
-  uniform Constant {
-    vec4 color;
-    float _alphaCutoff;
-  };
-
   vec4 frag () {
-    vec4 col = color * texture(s0, v_uv);
+    vec4 color = texture(s0, v_uv);
+    color -= texture(s0, v_uv - 0.002) * 2.5;
+    color += texture(s0, v_uv + 0.002) * 2.5;
 
-    // 如果aplha测试不通过就返回
-    if (color.w < _alphaCutoff) discard;
-
-    return col;
+    return color;
   }
 }%

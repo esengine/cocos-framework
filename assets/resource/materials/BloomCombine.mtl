@@ -4,7 +4,7 @@
   "_objFlags": 0,
   "_native": "",
   "_effectAsset": {
-    "__uuid__": "1875aea2-fd05-4cf7-b75a-8cb0b4bc1786"
+    "__uuid__": "e7843767-a781-4ee5-9367-0af688b9a9ad"
   },
   "_techIdx": 0,
   "_defines": [
@@ -23,10 +23,16 @@
   ],
   "_props": [
     {
-      "s0": {
+      "mainTexture": {
         "__uuid__": "57520716-48c8-4a19-8acf-41c9f8777fb0@6c48a"
       },
-      "_alphaCutoff": 0
+      "_baseMap": {
+        "__uuid__": "57520716-48c8-4a19-8acf-41c9f8777fb0@6c48a"
+      },
+      "_bloomIntensity": 0.5,
+      "_baseIntensity": 0.5,
+      "_bloomSaturation": 0.5,
+      "_baseSaturation": 0.5
     }
   ]
 }

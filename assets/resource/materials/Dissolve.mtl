@@ -4,7 +4,7 @@
   "_objFlags": 0,
   "_native": "",
   "_effectAsset": {
-    "__uuid__": "1875aea2-fd05-4cf7-b75a-8cb0b4bc1786"
+    "__uuid__": "53c02bae-80df-45c0-a971-9a73393764fd"
   },
   "_techIdx": 0,
   "_defines": [
@@ -23,10 +23,11 @@
   ],
   "_props": [
     {
-      "s0": {
+      "_dissolveTexSampler": {
         "__uuid__": "57520716-48c8-4a19-8acf-41c9f8777fb0@6c48a"
       },
-      "_alphaCutoff": 0
+      "_progress": 0.5,
+      "_dissolveThreshold": 0.5
     }
   ]
 }

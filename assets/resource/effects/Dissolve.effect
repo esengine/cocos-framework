@@ -9,6 +9,9 @@ CCEffect %{
       properties: &props
         _dissolveTexSampler:    { value: white }
         mainColor:      { value: [1, 1, 1, 1], editor: { type: color } }
+        _progress:      { value: 0.0 }
+        _dissolveThreshold: {value: 0.0}
+        _dissolveThresholdColor: {value: [1, 0, 0, 1], editor: {type: color}}
   - name: transparent
     passes:
     - vert: general-vs:vert # builtin header
@@ -28,12 +31,12 @@ CCProgram unlit-fs %{
 
   in vec2 v_uv;
   uniform sampler2D _dissolveTexSampler;
-  float _progress;
-  float _dissolveThreshold;
-  vec4 _dissolveThresholdColor;
 
   uniform Constant {
     vec4 mainColor;
+    vec4 _dissolveThresholdColor;
+    float _progress;
+    float _dissolveThreshold;
   };
 
   float saturate(float i) {
@@ -59,6 +62,6 @@ CCProgram unlit-fs %{
     bool b = dissolveAmount < progress;
 	  float colorAmount = lerp1( 1.0, 0.0, 1.0 - saturate( abs( progress - _dissolveThreshold - dissolveAmount ) / _dissolveThreshold ) );
     vec4 thresholdColor = lerp( vec4(0, 0, 0, 1), _dissolveThresholdColor, colorAmount);
-    return lerp(color, color * thresholdColor, b);
+    return lerp(color, color * thresholdColor, b ? 1.0 : 0.0); 
   }
 }%

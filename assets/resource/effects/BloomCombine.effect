@@ -1,0 +1,73 @@
+// Effect Syntax Guide: https://github.com/cocos-creator/docs-3d/blob/master/zh/material-system/effect-syntax.md
+
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: general-vs:vert # builtin header
+      frag: unlit-fs:frag
+      properties: &props
+        mainTexture:    { value: white }
+        _baseMap: {value: white}
+        mainColor:      { value: [1, 1, 1, 1], editor: { type: color } }
+        _bloomIntensity: {value: 1}
+        _baseIntensity: {value: 1}
+        _bloomSaturation: {value: 1}
+        _baseSaturation: {value: 1}
+  - name: transparent
+    passes:
+    - vert: general-vs:vert # builtin header
+      frag: unlit-fs:frag
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties: *props
+}%
+
+CCProgram unlit-fs %{
+  precision highp float;
+  #include <output>
+  #include <cc-fog>
+
+  in vec2 v_uv;
+  uniform sampler2D mainTexture;
+  uniform sampler2D _baseMap;
+  in float factor_fog;
+
+  uniform Constant {
+    vec4 mainColor;
+    float _bloomIntensity;
+    float _baseIntensity;
+    float _bloomSaturation;
+    float _baseSaturation;
+  };
+
+  vec4 lerp(float from, vec4 to, float t) {
+    return from + (to - from) * t;
+  }
+
+  float saturate(vec4 i) {
+    return clamp(i.x, 0.0, 1.0);
+  }
+
+  vec4 adjustSaturation(vec4 color, float saturation) {
+    float grey = dot(color.xyz, vec3(0.3, 0.59, 0.11));
+    return lerp(grey, color, saturation);
+  }
+
+  vec4 frag () {
+    vec4 bloom = texture(mainTexture, v_uv);
+    vec4 base = texture(_baseMap, v_uv);
+
+    bloom = adjustSaturation(bloom, _bloomSaturation) * _bloomIntensity;
+    base = adjustSaturation(base, _baseSaturation) * _baseIntensity;
+
+    base *= (1.0 - saturate(bloom));
+
+    return base + bloom;
+  }
+}%
