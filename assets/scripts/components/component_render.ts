@@ -119,12 +119,10 @@ export abstract class component_render extends es.Component implements IRenderab
         if (!this.debugRenderEnabled)
             return;
 
-        batcher.drawRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new Color(255, 255, 0));
+        batcher.drawHollowRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height, new Color(255, 255, 0));
         batcher.end();
-
-        batcher.drawHollowRect(this.entity.transform.position.x + this._localOffset.x, 
-            this.entity.transform.position.y + this._localOffset.y,
-            1, 1, new Color(153, 50, 204), 4);
+        
+        batcher.drawPixel(es.Vector2.add(this.entity.transform.position, this._localOffset), new Color(153, 50, 204), 4);
         batcher.end();
     }
 }

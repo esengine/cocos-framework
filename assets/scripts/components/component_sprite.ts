@@ -130,8 +130,8 @@ export class component_sprite extends component_render implements es.IUpdatable 
             dirty = true;
         }
 
-        if (this._sprite.node.eulerAngles.z != this.entity.transform.rotation) {
-            this._sprite.node.setRotationFromEuler(new Vec3(0, 0, this.entity.transform.rotation));
+        if (this._sprite.node.eulerAngles.z != this.entity.transform.rotationDegrees) {
+            this._sprite.node.setRotationFromEuler(new Vec3(0, 0, this.entity.transform.rotationDegrees));
             dirty = true;
         }
         
