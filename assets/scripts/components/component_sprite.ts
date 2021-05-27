@@ -1,11 +1,10 @@
 import { find, Graphics, Size, Sprite, UITransform, utils, Vec2, Vec3 } from "cc";
 import { Batcher } from "../graphics/Batcher";
-import { SceneEmitType, Scene_Game } from "../Scene_Game";
+import { SceneEmitType, RenderScene } from "../scenes/RenderScene";
 import { component_camera } from "./component_camera";
-import { component_render } from "./component_render";
 
-export class component_sprite extends component_render implements es.IUpdatable {
-    public get bounds() {
+export class component_sprite extends es.RenderableComponent implements es.IUpdatable {
+    public getbounds() {
         if (this._areBoundsDirty) {
             if (this._sprite.spriteFrame != null) {
                 this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin,
@@ -77,8 +76,6 @@ export class component_sprite extends component_render implements es.IUpdatable 
         super.onAddedToEntity();
         if (!this._sprite.node.parent)
             find('Canvas')?.addChild(this._sprite.node);
-
-        Scene_Game.emitter.emit(SceneEmitType.graphics_dirty);
     }
 
     onRemovedFromEntity() {
@@ -143,7 +140,6 @@ export class component_sprite extends component_render implements es.IUpdatable 
 
         if (dirty) {
             this._areBoundsDirty = true;
-            Scene_Game.emitter.emit(SceneEmitType.graphics_dirty);
         }
     }
 

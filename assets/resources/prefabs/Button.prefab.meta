@@ -2,12 +2,12 @@
   "ver": "1.1.27",
   "importer": "prefab",
   "imported": true,
-  "uuid": "750ec744-821e-49ea-826a-fb0beb940385",
+  "uuid": "acc9e07b-5d05-46e6-be64-7a97c0e9150f",
   "files": [
     ".json"
   ],
   "subMetas": {},
   "userData": {
-    "syncNodeName": "Sprite"
+    "syncNodeName": "Button"
   }
 }

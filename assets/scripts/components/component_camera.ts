@@ -1,6 +1,5 @@
-import { Camera, clamp, find, Node, Vec3, view } from "cc";
+import { Camera, clamp, find, Label, Node, Vec3, view } from "cc";
 import { Input } from "../Input/Input";
-import { SceneEmitType, Scene_Game } from "../Scene_Game";
 
 class CameraInset {
     left: number = 0;
@@ -9,7 +8,7 @@ class CameraInset {
     bottom: number = 0;
 }
 
-export class component_camera extends es.Component implements es.IUpdatable {
+export class component_camera extends es.Component implements es.IUpdatable, es.ICamera {
     public get position() {
         return this.entity.transform.position;
     }
@@ -24,15 +23,15 @@ export class component_camera extends es.Component implements es.IUpdatable {
         
         if (this._areBoundsDirty) {
             let viewport = view.getViewportRect();
-            let topLeft = this.screenToWorldPoint(new es.Vector2(viewport.x + this._inset.left, viewport.y + this._inset.top));
-            let bottomRight = this.screenToWorldPoint(new es.Vector2(viewport.x + viewport.width - this._inset.right,
-                viewport.y + viewport.height - this._inset.bottom));
+            let topLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left, this._inset.top));
+            let bottomRight = this.screenToWorldPoint(new es.Vector2(viewport.width - this._inset.right,
+                viewport.height - this._inset.bottom));
 
             if (this.entity.transform.rotation != 0) {
-                let topRight = this.screenToWorldPoint(new es.Vector2(viewport.x + viewport.width - this._inset.right,
-                    viewport.y + this._inset.top));
-                let bottomLeft = this.screenToWorldPoint(new es.Vector2(viewport.x + this._inset.left,
-                    viewport.y + viewport.height - this._inset.bottom));
+                let topRight = this.screenToWorldPoint(new es.Vector2(viewport.width - this._inset.right,
+                    this._inset.top));
+                let bottomLeft = this.screenToWorldPoint(new es.Vector2(this._inset.left,
+                    viewport.height - this._inset.bottom));
 
                 let minX = Math.min(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
                 let maxX = Math.max(topLeft.x, bottomRight.x, topRight.x, bottomLeft.x);
@@ -120,6 +119,14 @@ export class component_camera extends es.Component implements es.IUpdatable {
         this.setMaximumZoom(value);
     }
 
+    public get ratio() {
+        return this._ratio;
+    }
+
+    public set ratio(value: es.Vector2) {
+        this.setRatio(value);
+    }
+
     private _transformMatrix: es.Matrix2D = es.Matrix2D.identity;
     private _inverseTransformMatrix = es.Matrix2D.identity;
 
@@ -129,6 +136,7 @@ export class component_camera extends es.Component implements es.IUpdatable {
     private _minimumZoom = 0.3;
     private _maxmumZoom = 3;
     private _origin: es.Vector2 = es.Vector2.zero;
+    private _ratio: es.Vector2 = es.Vector2.one;
 
     private _areMatrixesDirty: boolean = true;
     private _areBoundsDirty: boolean = true;
@@ -147,7 +155,11 @@ export class component_camera extends es.Component implements es.IUpdatable {
             find('Canvas')?.addChild(cameraNode);
         }
 
-        this.origin = new es.Vector2(view.getViewportRect().width / 2, view.getViewportRect().height / 2);
+        const visibleSize = view.getVisibleSize();
+        this.origin = new es.Vector2(visibleSize.width / 2, visibleSize.height / 2);
+        
+        const canvasSize = view.getCanvasSize();
+        this.ratio = new es.Vector2(visibleSize.width / canvasSize.width, visibleSize.height / canvasSize.height);
     }
 
     protected updateMatrixes() {
@@ -210,6 +222,15 @@ export class component_camera extends es.Component implements es.IUpdatable {
         return this;
     }
 
+    public setRatio(value: es.Vector2) {
+        if (!this._ratio.equals(value)) {
+            this._ratio = value;
+            this._areBoundsDirty = true;
+        }
+
+        return this;
+    }
+
     public setInset(left: number, right: number, top: number, bottom: number) {
         this._inset = new CameraInset();
         this._inset.left = left;
@@ -230,7 +251,7 @@ export class component_camera extends es.Component implements es.IUpdatable {
 
     public screenToWorldPoint(screenPosition: es.Vector2): es.Vector2 {
         this.updateMatrixes();
-        es.Vector2Ext.transformR(screenPosition, this._inverseTransformMatrix, screenPosition);
+        es.Vector2Ext.transformR(es.Vector2.multiply(screenPosition, this.ratio), this._inverseTransformMatrix, screenPosition);
         return screenPosition;
     }
 
@@ -246,14 +267,19 @@ export class component_camera extends es.Component implements es.IUpdatable {
 
     public onEntityTransformChanged(comp: transform.Component) {
         this._areMatrixesDirty = true;
-        Scene_Game.emitter.emit(SceneEmitType.graphics_dirty);
     }
 
     public touchToWorldPoint() {
         return this.screenToWorldPoint(Input.scaledPosition(Input.touchPosition));
     }
 
+    public mouseToWorldPoint() {
+        return this.screenToWorldPoint(Input.scaledPosition(Input.mousePosition));
+    }
+
     public update() {
         this.camera.node.setPosition(new Vec3(this.position.x, this.position.y, 1000));
+        let camera = this.camera.getComponent(Camera);
+        if (camera) camera.orthoHeight = 320 + 320 * this.zoom;
     }
 }

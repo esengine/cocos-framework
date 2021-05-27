@@ -1,7 +1,7 @@
 import { Camera, Color, find, Graphics, Node } from "cc";
 import { component_camera } from "../components/component_camera";
 
-export class Batcher {
+export class Batcher implements es.IBatcher {
     public graphics: Graphics;
     public camera: component_camera | null = null;
     public strokeNum: number = 0;
@@ -32,7 +32,7 @@ export class Batcher {
         }
     }
 
-    public drawPoints(points: es.Vector2[], color: Color, thickness: number = 1) {
+    public drawPoints(points: es.Vector2[], color: Color, thickness: number = 2) {
         if (points.length < 2)
             return;
 
@@ -52,7 +52,7 @@ export class Batcher {
             this.drawLine(es.Vector2.add(position, points[points.length - 1]), es.Vector2.add(position, points[0]), color, thickness);
     }
 
-    public drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness: number = 1) {
+    public drawHollowRect(x: number, y: number, width: number, height: number, color: Color, thickness: number = 2) {
         this.graphics.strokeColor = color;
         this.graphics.lineWidth = thickness;
         
@@ -67,7 +67,7 @@ export class Batcher {
         this.drawLine(bl, tl, color, thickness);
     }
 
-    public drawCircle(position: es.Vector2, radius: number, color: Color, thickness: number = 1) {
+    public drawCircle(position: es.Vector2, radius: number, color: Color, thickness: number = 2) {
         const bounds = new es.Rectangle(position.x - radius, position.y - radius, radius * 2, radius * 2);
         if (this.camera && !this.camera.bounds.intersects(bounds))
             return;
@@ -79,7 +79,7 @@ export class Batcher {
         this.flushBatch();
     }
 
-    public drawCircleLow(position: es.Vector2, radius: number, color: Color, thickness: number = 1, resolution: number = 12) {
+    public drawCircleLow(position: es.Vector2, radius: number, color: Color, thickness: number = 2, resolution: number = 12) {
         let last = es.Vector2.unitX.multiplyScaler(radius);
         let lastP = es.Vector2Ext.perpendicularFlip(last);
 
@@ -109,7 +109,7 @@ export class Batcher {
         this.flushBatch();
     }
 
-    public drawLine(start: es.Vector2, end: es.Vector2, color: Color, thickness: number) {
+    public drawLine(start: es.Vector2, end: es.Vector2, color: Color, thickness: number = 2) {
         const bounds = es.RectangleExt.boundsFromPolygonVector([start, end]);
         if (this.camera && !this.camera.bounds.intersects(bounds))
             return;

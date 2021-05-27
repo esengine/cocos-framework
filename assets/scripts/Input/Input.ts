@@ -1,6 +1,7 @@
-import { EventTouch, SystemEvent, systemEvent, Touch } from "cc";
+import { EventMouse, EventTouch, macro, SystemEvent, systemEvent, Touch } from "cc";
 import { KeyboardUtils } from "./KeyboardUtils";
 import { Keys } from "./Keys";
+import { ButtonState, MouseState } from "./MouseState";
 import { VirtualInput } from "./VirtualInput";
 
 export class TouchState {
@@ -24,10 +25,11 @@ export class TouchState {
 export class Input {
     private static _init: boolean = false;
     private static _previousTouchState: TouchState = new TouchState();
-    private static _resolutionOffset: es.Vector2 = new es.Vector2();
+    private static _resolutionOffset: es.Vector2 = es.Vector2.zero;
     private static _touchIndex: number = 0;
 
     private static _gameTouchs: TouchState[] = [];
+    private static _mousePosition: es.Vector2 = new es.Vector2(-1, -1);
 
     /**
      * 触摸列表 存放最大个数量触摸点信息
@@ -59,6 +61,10 @@ export class Input {
         return this._gameTouchs[0].position;
     }
 
+    public static get mousePosition() {
+        return this._mousePosition;
+    }
+
     public static _virtualInputs: VirtualInput[] = [];
 
     /** 获取最大触摸数 */
@@ -85,7 +91,10 @@ export class Input {
         systemEvent.on(SystemEvent.EventType.TOUCH_END, this.touchEnd, this);
         systemEvent.on(SystemEvent.EventType.TOUCH_CANCEL, this.touchEnd, this);
 
-        // systemEvent.on(SystemEvent.EventType.Mou)
+        systemEvent.on(SystemEvent.EventType.MOUSE_DOWN, this.mouseDown, this);
+        systemEvent.on(SystemEvent.EventType.MOUSE_UP, this.mouseUp, this);
+        systemEvent.on(SystemEvent.EventType.MOUSE_MOVE, this.mouseMove, this);
+        systemEvent.on(SystemEvent.EventType.MOUSE_LEAVE, this.mouseLeave, this);
 
         this.initTouchCache();
     }
@@ -94,6 +103,8 @@ export class Input {
         KeyboardUtils.update();
         for (let i = 0; i < this._virtualInputs.length; i ++)
             this._virtualInputs[i].update();
+
+        this._previousMouseState = this._currentMouseState.clone();
     }
 
     public static scaledPosition(position: es.Vector2) {
@@ -129,9 +140,26 @@ export class Input {
         return this.isKeyReleased(keyA) || this.isKeyReleased(keyB);
     }
 
-    public static leftMouseButtonPressed() {
-
+    public static get leftMouseButtonPressed() {
+        return this._currentMouseState.leftButton == ButtonState.pressed && 
+            this._previousMouseState.leftButton == ButtonState.released;
     }
+
+    public static get rightMouseButtonPressed() {
+        return this._currentMouseState.rightButton == ButtonState.pressed &&
+            this._previousMouseState.rightButton == ButtonState.released;
+    }
+
+    public static get leftMouseButtonDown() {
+        return this._currentMouseState.leftButton == ButtonState.pressed;
+    }
+
+    public static get rightMouseButtonDown() {
+        return this._currentMouseState.rightButton == ButtonState.pressed;
+    }
+
+    private static _previousMouseState: MouseState = new MouseState();
+    private static _currentMouseState: MouseState = new MouseState();
 
     private static initTouchCache() {
         this._totalTouchCount = 0;
@@ -168,6 +196,7 @@ export class Input {
             touchData.y = touch.getLocationY();
         }
     }
+    
 
     private static touchEnd(touch: Touch, event: EventTouch) {
         let touchIndex = this._gameTouchs.findIndex(t => t.touchPoint == touch.getID());
@@ -181,6 +210,35 @@ export class Input {
                 this._touchIndex = 0;
             }
         }
+    }
+
+    private static mouseDown(event: EventMouse) {
+        if (event.getButton() == EventMouse.BUTTON_LEFT) {
+            this._currentMouseState.leftButton = ButtonState.pressed;
+        }
+
+        if (event.getButton() == EventMouse.BUTTON_RIGHT) {
+            this._currentMouseState.rightButton = ButtonState.pressed;
+        }
+    }
+
+    private static mouseUp(event: EventMouse) {
+        if (event.getButton() == EventMouse.BUTTON_LEFT) {
+            this._currentMouseState.leftButton = ButtonState.released;
+        }
+
+        if (event.getButton() == EventMouse.BUTTON_RIGHT) {
+            this._currentMouseState.rightButton = ButtonState.released;
+        }
+    }
+
+    private static mouseMove(event: EventMouse) {
+        this._mousePosition = new es.Vector2(event.getLocationX(), event.getLocationY());
+    }
+
+    private static mouseLeave(event: EventMouse) {
+        this._mousePosition = new es.Vector2(-1, -1);
+        this._currentMouseState = new MouseState();
     }
 
     private static setpreviousTouchState(touchState: TouchState) {
