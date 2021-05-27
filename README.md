@@ -9,3 +9,6 @@
 - DefaultRenderer：渲染场景中每个`component_render`都会被进行渲染
 
 你可以随意继承`Renderer`并以所需的任何方式渲染。场景中包含一个`renderableComponents`字段，该字段包含所有的`component_render`以便于访问和过滤。
+
+## 渲染截图
+![avatar](/images/screenshot.png)
