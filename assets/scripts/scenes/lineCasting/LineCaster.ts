@@ -1,10 +1,8 @@
-import { Color, find } from "cc";
+import { Color } from "cc";
 import { component_camera } from "../../components/component_camera";
 import { Batcher } from "../../graphics/Batcher";
 import { Input } from "../../Input/Input";
 import { Keys } from "../../Input/Keys";
-import { RenderScene, SceneEmitType } from "../RenderScene";
-
 export class LineCaster extends es.RenderableComponent implements es.IUpdatable {
     private _lastPosition: es.Vector2 = new es.Vector2(101, 101);
     private _collisionPosition: es.Vector2 = new es.Vector2(-1, -1);

@@ -6,10 +6,11 @@ import { RenderScene, sampleScene } from "../RenderScene";
 @sampleScene("RigidBody")
 export class RigidBodyScene extends RenderScene {
     public onStart() {
-        let camera = this.findEntity('camera')?.getComponent(component_camera);
-        if (camera) {
-            camera.zoom = 2;
-        }
+        // let camera = this.findEntity('camera')?.getComponent(component_camera);
+        // if (camera) {
+        //     camera.zoom = 2;
+        // }
+        (this.camera as component_camera).position.add(new es.Vector2(200, 0))
 
         resources.load('prefabs/moon', Prefab, (err, data)=>{
             this.initAfter(data);

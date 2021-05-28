@@ -257,7 +257,7 @@ export class component_camera extends es.Component implements es.IUpdatable, es.
 
     public worldToScreenPoint(worldPosition: es.Vector2): es.Vector2 {
         this.updateMatrixes();
-        es.Vector2Ext.transformR(worldPosition, this._transformMatrix, worldPosition);
+        es.Vector2Ext.transformR(es.Vector2.multiply(worldPosition, this.ratio), this._transformMatrix, worldPosition);
         return worldPosition;
     } 
 
@@ -279,7 +279,7 @@ export class component_camera extends es.Component implements es.IUpdatable, es.
 
     public update() {
         this.camera.node.setPosition(new Vec3(this.position.x, this.position.y, 1000));
-        let camera = this.camera.getComponent(Camera);
-        if (camera) camera.orthoHeight = 320 + 320 * this.zoom;
+        // let camera = this.camera.getComponent(Camera);
+        // if (camera) camera.orthoHeight = 320 + 320 * this.zoom;
     }
 }
