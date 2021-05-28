@@ -1,4 +1,4 @@
-import { find, instantiate, Prefab, resources, Sprite } from "cc";
+import { find, instantiate, Prefab, resources, Sprite, view } from "cc";
 import { component_camera } from "../../components/component_camera";
 import { component_sprite } from "../../components/component_sprite";
 import { RenderScene, sampleScene } from "../RenderScene";
@@ -30,8 +30,6 @@ export class RigidBodyScene extends RenderScene {
         this.createBody(new es.Vector2(500, 400), 4, friction, elasticity, new es.Vector2(0, -270), moonTex);
 
         
-        this.createBody(new es.Vector2(0, 250), 0, friction, elasticity, new es.Vector2(0, -270), moonTex);
-
         this.createBody(new es.Vector2(-200, 250), 0, friction, elasticity, new es.Vector2(0, -270), moonTex);
 
         this.createBody(new es.Vector2(200, 700), 15, friction, elasticity, new es.Vector2(150, -150), moonTex);

@@ -11,4 +11,6 @@
 你可以随意继承`Renderer`并以所需的任何方式渲染。场景中包含一个`renderableComponents`字段，该字段包含所有的`component_render`以便于访问和过滤。
 
 ## 渲染截图
-![avatar](/images/screenshot.png)
+![avatar1](/images/screenshot.png)
+![avatar2](/images/screenshot1.png)
+![avatar3](/images/screenshot2.png)
