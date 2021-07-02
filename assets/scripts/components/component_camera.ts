@@ -166,20 +166,20 @@ export class component_camera extends es.Component implements es.IUpdatable, es.
         if (!this._areBoundsDirty)
             return;
 
-        let tempMat: es.Matrix2D;
-        this._transformMatrix = es.Matrix2D.createTranslation(-this.entity.transform.position.x, -this.entity.transform.position.y);
+        let tempMat: es.Matrix2D = new es.Matrix2D();
+        es.Matrix2D.createTranslation(-this.entity.transform.position.x, -this.entity.transform.position.y, this._transformMatrix);
 
         if (this._zoom != 1) {
-            tempMat = es.Matrix2D.createScale(this._zoom, this._zoom);
+            es.Matrix2D.createScale(this._zoom, this._zoom, tempMat);
             this._transformMatrix = this._transformMatrix.multiply(tempMat);
         }
 
         if (this.entity.transform.rotation != 0) {
-            tempMat = es.Matrix2D.createRotation(this.entity.transform.rotation);
+            es.Matrix2D.createRotation(this.entity.transform.rotation, tempMat);
             this._transformMatrix = this._transformMatrix.multiply(tempMat);
         }
 
-        tempMat = es.Matrix2D.createTranslation(Math.trunc(this._origin.x), Math.trunc(this._origin.y));
+        es.Matrix2D.createTranslation(Math.trunc(this._origin.x), Math.trunc(this._origin.y), tempMat);
         this._transformMatrix = this._transformMatrix.multiply(tempMat);
 
         this._inverseTransformMatrix = es.Matrix2D.invert(this._transformMatrix);
@@ -251,15 +251,15 @@ export class component_camera extends es.Component implements es.IUpdatable, es.
 
     public screenToWorldPoint(screenPosition: es.Vector2): es.Vector2 {
         this.updateMatrixes();
-        es.Vector2Ext.transformR(es.Vector2.multiply(screenPosition, this.ratio), this._inverseTransformMatrix, screenPosition);
+        es.Vector2Ext.transformR(screenPosition.multiply(this.ratio), this._inverseTransformMatrix, screenPosition);
         return screenPosition;
     }
 
     public worldToScreenPoint(worldPosition: es.Vector2): es.Vector2 {
         this.updateMatrixes();
-        es.Vector2Ext.transformR(es.Vector2.multiply(worldPosition, this.ratio), this._transformMatrix, worldPosition);
+        es.Vector2Ext.transformR(worldPosition.multiply(this.ratio), this._transformMatrix, worldPosition);
         return worldPosition;
-    } 
+    }
 
     public forceMatrixUpdate() {
         this._areMatrixesDirty = true;

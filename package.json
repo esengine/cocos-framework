@@ -1,6 +1,9 @@
 {
+  "creator": {
+    "version": "3.2.0"
+  },
   "name": "imagine-game-editor",
   "type": "3d",
   "uuid": "d25ac024-2210-4466-a566-caebac66622a",
-  "version": "3.0.1"
+  "version": "3.2.0"
 }

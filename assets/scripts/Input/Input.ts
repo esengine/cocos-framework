@@ -74,8 +74,8 @@ export class Input {
 
     /** 获取第一个触摸点距离上次距离的增量 */
     public static get touchPositionDelta() {
-        let delta = es.Vector2.subtract(this.touchPosition, this._previousTouchState.position);
-        if (delta.length() > 0) {
+        let delta = this.touchPosition.sub(this._previousTouchState.position);
+        if (delta.magnitude() > 0) {
             this.setpreviousTouchState(this._gameTouchs[0]);
         }
         return delta;
@@ -109,7 +109,7 @@ export class Input {
 
     public static scaledPosition(position: es.Vector2) {
         let scaledPos = new es.Vector2(position.x - this._resolutionOffset.x, position.y - this._resolutionOffset.y);
-        return es.Vector2.multiply(scaledPos, this.resolutionScale);
+        return scaledPos.multiply(this.resolutionScale);
     }
 
     /**
@@ -154,8 +154,16 @@ export class Input {
         return this._currentMouseState.leftButton == ButtonState.pressed;
     }
 
+    public static get leftMouseButtonRelease() {
+        return this._currentMouseState.leftButton == ButtonState.released;
+    }
+
     public static get rightMouseButtonDown() {
         return this._currentMouseState.rightButton == ButtonState.pressed;
+    }
+
+    public static get rightMouseButtonRelease() {
+        return this._currentMouseState.rightButton == ButtonState.released;
     }
 
     private static _previousMouseState: MouseState = new MouseState();

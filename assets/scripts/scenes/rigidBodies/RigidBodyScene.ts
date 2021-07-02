@@ -30,7 +30,6 @@ export class RigidBodyScene extends RenderScene {
         this.createBody(new es.Vector2(400, 0), 60, friction, elasticity, new es.Vector2(10, 90), moonTex);
         this.createBody(new es.Vector2(500, 400), 4, friction, elasticity, new es.Vector2(0, -270), moonTex);
 
-        
         this.createBody(new es.Vector2(-200, 250), 0, friction, elasticity, new es.Vector2(0, -270), moonTex);
 
         this.createBody(new es.Vector2(200, 700), 15, friction, elasticity, new es.Vector2(150, -150), moonTex);
@@ -58,5 +57,11 @@ export class RigidBodyScene extends RenderScene {
         entity.addComponent(new es.CircleCollider());
 
         return rigidBody;
+    }
+
+    update() {
+        super.update();
+
+        es.Core.emitter.emit(es.CoreEvents.renderChanged, es.Time.deltaTime);
     }
 }

@@ -227,7 +227,11 @@ declare module es {
         /**
          * 每帧更新事件
          */
-        frameUpdated = 1
+        frameUpdated = 1,
+        /**
+         * 当渲染发生时触发
+         */
+        renderChanged = 2
     }
 }
 declare module es {
@@ -440,6 +444,10 @@ declare module es {
         static readonly one: Vector2;
         static readonly unitX: Vector2;
         static readonly unitY: Vector2;
+        static readonly up: Vector2;
+        static readonly down: Vector2;
+        static readonly left: Vector2;
+        static readonly right: Vector2;
         /**
          *
          * @param value1
@@ -454,42 +462,11 @@ declare module es {
         static divide(value1: Vector2, value2: Vector2): Vector2;
         static divideScaler(value1: Vector2, value2: number): Vector2;
         /**
-         *
-         * @param value1
-         * @param value2
-         */
-        static multiply(value1: Vector2, value2: Vector2): Vector2;
-        /**
-         *
-         * @param value1
-         * @param value2
-         * @returns
-         */
-        static multiplyScaler(value1: Vector2, value2: number): Vector2;
-        /**
-         *
-         * @param value1
-         * @param value2
-         */
-        static subtract(value1: Vector2, value2: Vector2): Vector2;
-        /**
-         * 创建一个新的Vector2
-         * 它包含来自另一个向量的标准化值。
-         * @param value
-         */
-        static normalize(value: Vector2): Vector2;
-        /**
-         * 返回两个向量的点积
-         * @param value1
-         * @param value2
-         */
-        static dot(value1: Vector2, value2: Vector2): number;
-        /**
          * 返回两个向量之间距离的平方
          * @param value1
          * @param value2
          */
-        static distanceSquared(value1: Vector2, value2: Vector2): number;
+        static sqrDistance(value1: Vector2, value2: Vector2): number;
         /**
          * 将指定的值限制在一个范围内
          * @param value1
@@ -531,7 +508,7 @@ declare module es {
          * @param value2
          * @returns 两个向量之间的距离
          */
-        static distance(value1: Vector2, value2: Vector2): number;
+        static distance(vec1: Vector2, vec2: Vector2): number;
         /**
          * 返回两个向量之间的角度，单位是度数
          * @param from
@@ -559,11 +536,14 @@ declare module es {
          * @returns
          */
         static smoothStep(value1: Vector2, value2: Vector2, amount: number): Vector2;
+        setTo(x: number, y: number): void;
+        negate(): Vector2;
         /**
          *
          * @param value
          */
-        add(value: Vector2): Vector2;
+        add(v: Vector2): Vector2;
+        addEqual(v: Vector2): Vector2;
         /**
          *
          * @param value
@@ -586,13 +566,24 @@ declare module es {
          * @param value 要减去的Vector2
          * @returns 当前Vector2
          */
-        subtract(value: Vector2): this;
+        sub(value: Vector2): Vector2;
+        subEqual(v: Vector2): Vector2;
+        dot(v: Vector2): number;
+        /**
+         *
+         * @param size
+         * @returns
+         */
+        scale(size: number): Vector2;
+        scaleEqual(size: number): Vector2;
+        transform(matrix: Matrix2D): Vector2;
+        normalize(): Vector2;
         /**
          * 将这个Vector2变成一个方向相同的单位向量
          */
-        normalize(): void;
-        /** 返回它的长度 */
-        length(): number;
+        normalizeEqual(): Vector2;
+        magnitude(): number;
+        distance(v?: Vector2): number;
         /**
          * 返回该Vector2的平方长度
          * @returns 这个Vector2的平方长度
@@ -613,7 +604,7 @@ declare module es {
          * @param other 要比较的对象
          * @returns 如果实例相同true 否则false
          */
-        equals(other: Vector2 | object): boolean;
+        equals(other: Vector2, tolerance?: number): boolean;
         isValid(): boolean;
         /**
          * 创建一个新的Vector2，其中包含来自两个向量的最小值
@@ -639,6 +630,7 @@ declare module es {
          * @returns
          */
         static hermite(value1: Vector2, tangent1: Vector2, value2: Vector2, tangent2: Vector2, amount: number): Vector2;
+        static unsignedAngle(from: Vector2, to: Vector2, round?: boolean): number;
         clone(): Vector2;
     }
 }
@@ -1107,7 +1099,139 @@ declare module es {
          * @param minimumTranslationVector
          * @param responseVelocity
          */
-        calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2, responseVelocity?: Vector2): void;
+        calculateResponseVelocity(relativeVelocity: Vector2, minimumTranslationVector: Vector2): Vector2;
+    }
+}
+declare module es {
+    class CharacterCollisionState2D {
+        right: boolean;
+        left: boolean;
+        above: boolean;
+        below: boolean;
+        becameGroundedThisFrame: boolean;
+        wasGroundedLastFrame: boolean;
+        movingDownSlope: boolean;
+        slopeAngle: number;
+        hasCollision(): boolean;
+        reset(): void;
+        toString(): string;
+    }
+    class CharacterController implements ITriggerListener {
+        onControllerCollidedEvent: ObservableT<RaycastHit>;
+        onTriggerEnterEvent: ObservableT<Collider>;
+        onTriggerExitEvent: ObservableT<Collider>;
+        /**
+         * 如果为 true，则在垂直移动单帧时将忽略平台的一种方式
+         */
+        ignoreOneWayPlatformsTime: number;
+        supportSlopedOneWayPlatforms: boolean;
+        ignoredColliders: Set<Collider>;
+        /**
+         * 定义距离碰撞射线的边缘有多远。
+         * 如果使用 0 范围进行投射，则通常会导致不需要的光线击中（例如，直接从表面水平投射的足部碰撞器可能会导致击中）
+         */
+        skinWidth: number;
+        /**
+         * CC2D 可以爬升的最大坡度角
+         */
+        slopeLimit: number;
+        /**
+         * 构成跳跃的帧之间垂直运动变化的阈值
+         */
+        jumpingThreshold: number;
+        /**
+         * 基于斜率乘以速度的曲线（负 = 下坡和正 = 上坡）
+         */
+        slopeSpeedMultiplier: AnimCurve;
+        totalHorizontalRays: number;
+        totalVerticalRays: number;
+        collisionState: CharacterCollisionState2D;
+        velocity: Vector2;
+        readonly isGrounded: boolean;
+        readonly raycastHitsThisFrame: RaycastHit[];
+        constructor(player: Entity, skinWidth?: number, platformMask?: number, onewayPlatformMask?: number, triggerMask?: number);
+        onTriggerEnter(other: Collider, local: Collider): void;
+        onTriggerExit(other: Collider, local: Collider): void;
+        /**
+         * 尝试将角色移动到位置 + deltaMovement。 任何挡路的碰撞器都会在遇到时导致运动停止
+         * @param deltaMovement
+         * @param deltaTime
+         */
+        move(deltaMovement: Vector2, deltaTime: number): void;
+        /**
+         * 直接向下移动直到接地
+         * @param maxDistance
+         */
+        warpToGrounded(maxDistance?: number): void;
+        /**
+         * 这应该在您必须在运行时修改 BoxCollider2D 的任何时候调用。
+         * 它将重新计算用于碰撞检测的光线之间的距离。
+         * 它也用于 skinWidth setter，以防在运行时更改。
+         */
+        recalculateDistanceBetweenRays(): void;
+        /**
+         * 将 raycastOrigins 重置为由 skinWidth 插入的框碰撞器的当前范围。
+         * 插入它是为了避免从直接接触另一个碰撞器的位置投射光线，从而导致不稳定的法线数据。
+         */
+        private primeRaycastOrigins;
+        /**
+         * 我们必须在这方面使用一些技巧。
+         * 光线必须从我们的碰撞器（skinWidth）内部的一小段距离投射，以避免零距离光线会得到错误的法线。
+         * 由于这个小偏移，我们必须增加光线距离 skinWidth 然后记住在实际移动玩家之前从 deltaMovement 中删除 skinWidth
+         * @param deltaMovement
+         * @returns
+         */
+        private moveHorizontally;
+        private moveVertically;
+        /**
+         * 检查 BoxCollider2D 下的中心点是否存在坡度。
+         * 如果找到一个，则调整 deltaMovement 以便玩家保持接地，并考虑slopeSpeedModifier 以加快移动速度。
+         * @param deltaMovement
+         * @returns
+         */
+        private handleVerticalSlope;
+        /**
+         * 如果我们要上坡，则处理调整 deltaMovement
+         * @param deltaMovement
+         * @param angle
+         * @returns
+         */
+        private handleHorizontalSlope;
+        private _player;
+        private _collider;
+        private _skinWidth;
+        private _triggerHelper;
+        /**
+         * 这用于计算为检查坡度而投射的向下光线。
+         * 我们使用有点随意的值 75 度来计算检查斜率的射线的长度。
+         */
+        private _slopeLimitTangent;
+        private readonly kSkinWidthFloatFudgeFactor;
+        /**
+         * 我们的光线投射原点角的支架（TR、TL、BR、BL）
+         */
+        private _raycastOrigins;
+        /**
+         * 存储我们在移动过程中命中的光线投射
+         */
+        private _raycastHit;
+        /**
+         * 存储此帧发生的任何光线投射命中。
+         * 我们必须存储它们，以防我们遇到水平和垂直移动的碰撞，以便我们可以在设置所有碰撞状态后发送事件
+         */
+        private _raycastHitsThisFrame;
+        private _verticalDistanceBetweenRays;
+        private _horizontalDistanceBetweenRays;
+        /**
+         * 我们使用这个标志来标记我们正在爬坡的情况，我们修改了 delta.y 以允许爬升。
+         * 原因是，如果我们到达斜坡的尽头，我们可以进行调整以保持接地
+         */
+        private _isGoingUpSlope;
+        private _isWarpingToGround;
+        private platformMask;
+        private triggerMask;
+        private oneWayPlatformMask;
+        private readonly rayOriginSkinMutiplier;
     }
 }
 declare module es {
@@ -1185,6 +1309,8 @@ declare module es {
 }
 declare module es {
     abstract class Collider extends Component {
+        static readonly lateSortOrder: number;
+        castSortOrder: number;
         /**
          * 对撞机的基本形状
          */
@@ -2163,11 +2289,227 @@ declare module es {
 }
 declare module es {
     class Color {
-        a: number;
+        /**
+         * 红色通道
+         */
         r: number;
+        /**
+         * 绿色通道
+         */
         g: number;
+        /**
+         * 蓝色通道
+         */
         b: number;
+        /**
+         * 透明度通道 (仅0-1之间)
+         */
+        a: number;
+        /**
+         * 色调
+         */
+        h: number;
+        /**
+         * 饱和
+         */
+        s: number;
+        /**
+         * 亮度
+         */
+        l: number;
+        /**
+         * 从 r, g, b, a 创建一个新的 Color 实例
+         *
+         * @param r  颜色的红色分量 (0-255)
+         * @param g  颜色的绿色成分 (0-255)
+         * @param b  颜色的蓝色分量 (0-255)
+         * @param a  颜色的 alpha 分量 (0-1.0)
+         */
         constructor(r: number, g: number, b: number, a?: number);
+        /**
+         * 从 r, g, b, a 创建一个新的 Color 实例
+         *
+         * @param r  颜色的红色分量 (0-255)
+         * @param g  颜色的绿色成分 (0-255)
+         * @param b  颜色的蓝色分量 (0-255)
+         * @param a  颜色的 alpha 分量 (0-1.0)
+         */
+        static fromRGB(r: number, g: number, b: number, a?: number): Color;
+        /**
+         * 从十六进制字符串创建一个新的 Color 实例
+         *
+         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
+         */
+        static createFromHex(hex: string): Color;
+        /**
+         * 从 hsl 值创建一个新的 Color 实例
+         *
+         * @param h  色调表示 [0-1]
+         * @param s  饱和度表示为 [0-1]
+         * @param l  亮度表示 [0-1]
+         * @param a  透明度表示 [0-1]
+         */
+        static fromHSL(h: number, s: number, l: number, a?: number): Color;
+        /**
+         * 将当前颜色调亮指定的量
+         *
+         * @param factor
+         */
+        lighten(factor?: number): Color;
+        /**
+         * 将当前颜色变暗指定的量
+         *
+         * @param factor
+         */
+        darken(factor?: number): Color;
+        /**
+         * 使当前颜色饱和指定的量
+         *
+         * @param factor
+         */
+        saturate(factor?: number): Color;
+        /**
+         * 按指定量降低当前颜色的饱和度
+         *
+         * @param factor
+         */
+        desaturate(factor?: number): Color;
+        /**
+         * 将一种颜色乘以另一种颜色，得到更深的颜色
+         *
+         * @param color
+         */
+        mulitiply(color: Color): Color;
+        /**
+         * 筛选另一种颜色，导致颜色较浅
+         *
+         * @param color
+         */
+        screen(color: Color): Color;
+        /**
+         * 反转当前颜色
+         */
+        invert(): Color;
+        /**
+         * 将当前颜色与另一个颜色平均
+         *
+         * @param color
+         */
+        average(color: Color): Color;
+        /**
+         * 返回颜色的 CSS 字符串表示形式。
+         *
+         * @param format
+         */
+        toString(format?: 'rgb' | 'hsl' | 'hex'): string;
+        /**
+         * 返回颜色分量的十六进制值
+         * @param c
+         * @see https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
+         */
+        private _componentToHex;
+        /**
+         *返回颜色的十六进制表示
+         */
+        toHex(): string;
+        /**
+         * 从十六进制字符串设置颜色
+         *
+         * @param hex  #ffffff 形式的 CSS 颜色字符串，alpha 组件是可选的
+         */
+        fromHex(hex: string): void;
+        /**
+         * 返回颜色的 RGBA 表示
+         */
+        toRGBA(): string;
+        /**
+         * 返回颜色的 HSLA 表示
+         */
+        toHSLA(): string;
+        /**
+         * 返回颜色的 CSS 字符串表示形式
+         */
+        fillStyle(): string;
+        /**
+         * 返回当前颜色的克隆
+         */
+        clone(): Color;
+        /**
+         * Black (#000000)
+         */
+        static Black: Color;
+        /**
+         * White (#FFFFFF)
+         */
+        static White: Color;
+        /**
+         * Gray (#808080)
+         */
+        static Gray: Color;
+        /**
+         * Light gray (#D3D3D3)
+         */
+        static LightGray: Color;
+        /**
+         * Dark gray (#A9A9A9)
+         */
+        static DarkGray: Color;
+        /**
+         * Yellow (#FFFF00)
+         */
+        static Yellow: Color;
+        /**
+         * Orange (#FFA500)
+         */
+        static Orange: Color;
+        /**
+         * Red (#FF0000)
+         */
+        static Red: Color;
+        /**
+         * Vermillion (#FF5B31)
+         */
+        static Vermillion: Color;
+        /**
+         * Rose (#FF007F)
+         */
+        static Rose: Color;
+        /**
+         * Magenta (#FF00FF)
+         */
+        static Magenta: Color;
+        /**
+         * Violet (#7F00FF)
+         */
+        static Violet: Color;
+        /**
+         * Blue (#0000FF)
+         */
+        static Blue: Color;
+        /**
+         * Azure (#007FFF)
+         */
+        static Azure: Color;
+        /**
+         * Cyan (#00FFFF)
+         */
+        static Cyan: Color;
+        /**
+         * Viridian (#59978F)
+         */
+        static Viridian: Color;
+        /**
+         * Green (#00FF00)
+         */
+        static Green: Color;
+        /**
+         * Chartreuse (#7FFF00)
+         */
+        static Chartreuse: Color;
+        /**
+         * Transparent (#FFFFFF00)
+         */
+        static Transparent: Color;
     }
 }
 declare module es {
@@ -2194,11 +2536,13 @@ declare module es {
         camera: ICamera;
         readonly renderOrder: number;
         shouldDebugRender: boolean;
+        protected renderDirty: boolean;
         constructor(renderOrder: number, camera: ICamera);
         onAddedToScene(scene: es.Scene): void;
         unload(): void;
         protected beginRender(cam: ICamera): void;
         protected endRender(): void;
+        protected onRenderChanged(): void;
         abstract render(scene: Scene): void;
         protected renderAfterStateCheck(renderable: IRenderable, cam: ICamera): void;
         protected debugRender(scene: Scene): void;
@@ -2282,7 +2626,10 @@ declare module es {
          * 在这个过程中，t被修改为在曲线段的范围内。
          * @param t
          */
-        pointIndexAtTime(t: Ref<number>): number;
+        pointIndexAtTime(t: number): {
+            time: number;
+            range: number;
+        };
         /**
          * 设置一个控制点，考虑到这是否是一个共享点，如果是，则适当调整
          * @param index
@@ -2450,6 +2797,7 @@ declare module es {
          */
         static isPowerOfTwo(value: number): boolean;
         static lerp(from: number, to: number, t: number): number;
+        static betterLerp(a: number, b: number, t: number, epsilon: number): number;
         /**
          * 使度数的角度在a和b之间
          * 用于处理360度环绕
@@ -2572,6 +2920,11 @@ declare module es {
          */
         static approachAngle(start: number, end: number, shift: number): number;
         /**
+         * 将 Vector 投影到另一个 Vector 上
+         * @param other
+         */
+        static project(self: Vector2, other: Vector2): Vector2;
+        /**
          * 通过将偏移量（全部以弧度为单位）夹住结果并选择最短路径，起始角度朝向终止角度。
          * 起始值可以小于或大于终止值。
          * 此方法的工作方式与“角度”方法非常相似，唯一的区别是使用弧度代替度，并以2 * Pi代替360。
@@ -2687,6 +3040,22 @@ declare module es {
          * @returns
          */
         static isValid(x: number): boolean;
+        static smoothDamp(current: number, target: number, currentVelocity: number, smoothTime: number, maxSpeed: number, deltaTime: number): {
+            value: number;
+            currentVelocity: number;
+        };
+        static smoothDampVector(current: Vector2, target: Vector2, currentVelocity: Vector2, smoothTime: number, maxSpeed: number, deltaTime: number): Vector2;
+        /**
+         * 将值（在 leftMin - leftMax 范围内）映射到 rightMin - rightMax 范围内的值
+         * @param value
+         * @param leftMin
+         * @param leftMax
+         * @param rightMin
+         * @param rightMax
+         * @returns
+         */
+        static mapMinMax(value: number, leftMin: number, leftMax: number, rightMin: number, rightMax: any): number;
+        static fromAngle(angle: number): Vector2;
     }
 }
 declare module es {
@@ -2694,6 +3063,8 @@ declare module es {
      * 代表右手4x4浮点矩阵，可以存储平移、比例和旋转信息
      */
     class Matrix {
+        private static identity;
+        static readonly Identity: Matrix;
         m11: number;
         m12: number;
         m13: number;
@@ -2710,6 +3081,7 @@ declare module es {
         m42: number;
         m43: number;
         m44: number;
+        constructor(m11?: any, m12?: any, m13?: any, m14?: any, m21?: any, m22?: any, m23?: any, m24?: any, m31?: any, m32?: any, m33?: any, m34?: any, m41?: any, m42?: any, m43?: any, m44?: any);
         /**
          * 为自定义的正交视图创建一个新的投影矩阵
          * @param left
@@ -2719,6 +3091,8 @@ declare module es {
          * @param result
          */
         static createOrthographicOffCenter(left: number, right: number, bottom: number, top: number, zNearPlane: number, zFarPlane: number, result?: Matrix): void;
+        static createTranslation(position: Vector2, result: Matrix): void;
+        static createRotationZ(radians: number, result: Matrix): void;
         /**
          * 创建一个新的矩阵，其中包含两个矩阵的乘法。
          * @param matrix1
@@ -2743,6 +3117,8 @@ declare module es {
          * 返回标识矩阵
          */
         static readonly identity: Matrix2D;
+        setIdentity(): Matrix2D;
+        setValues(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number): Matrix2D;
         /**
          * 储存在该矩阵中的位置
          */
@@ -2760,34 +3136,24 @@ declare module es {
          */
         scale: Vector2;
         /**
-         * 构建一个矩阵
-         * @param m11
-         * @param m12
-         * @param m21
-         * @param m22
-         * @param m31
-         * @param m32
-         */
-        constructor(m11: number, m12: number, m21: number, m22: number, m31: number, m32: number);
-        /**
          * 创建一个新的围绕Z轴的旋转矩阵2D
          * @param radians
          */
-        static createRotation(radians: number): Matrix2D;
+        static createRotation(radians: number, result: Matrix2D): void;
         static createRotationOut(radians: number, result: Matrix2D): void;
         /**
          * 创建一个新的缩放矩阵2D
          * @param xScale
          * @param yScale
          */
-        static createScale(xScale: number, yScale: number): Matrix2D;
+        static createScale(xScale: number, yScale: number, result: Matrix2D): void;
         static createScaleOut(xScale: number, yScale: number, result: Matrix2D): void;
         /**
          * 创建一个新的平移矩阵2D
          * @param xPosition
          * @param yPosition
          */
-        static createTranslation(xPosition: number, yPosition: number): Matrix2D;
+        static createTranslation(xPosition: number, yPosition: number, result: Matrix2D): Matrix2D;
         static createTranslationOut(position: Vector2, result: Matrix2D): void;
         static invert(matrix: Matrix2D): Matrix2D;
         /**
@@ -2798,7 +3164,7 @@ declare module es {
         substract(matrix: Matrix2D): Matrix2D;
         divide(matrix: Matrix2D): Matrix2D;
         multiply(matrix: Matrix2D): Matrix2D;
-        static multiply(matrix1: Matrix2D, matrix2: Matrix2D, result: Matrix2D): Matrix2D;
+        static multiply(matrix1: Matrix2D, matrix2: Matrix2D, result: Matrix2D): void;
         determinant(): number;
         /**
          * 创建一个新的Matrix2D，包含指定矩阵中的线性插值。
@@ -2957,7 +3323,10 @@ declare module es {
          * @param value 另一个用于测试的矩形
          */
         intersects(value: Rectangle): boolean;
-        rayIntersects(ray: Ray2D, distance: Ref<number>): boolean;
+        rayIntersects(ray: Ray2D): {
+            intersected: boolean;
+            distance: number;
+        };
         /**
          * 获取所提供的矩形是否在此矩形的边界内
          * @param value
@@ -3162,9 +3531,10 @@ declare module es {
          */
         centroid: Vector2;
         constructor(collider?: Collider, fraction?: number, distance?: number, point?: Vector2, normal?: Vector2);
-        setValues(collider: Collider, fraction: number, distance: number, point: Vector2): void;
-        setValuesNonCollider(fraction: number, distance: number, point: Vector2, normal: Vector2): void;
+        setAllValues(collider: Collider, fraction: number, distance: number, point: Vector2, normal: Vector2): void;
+        setValues(fraction: number, distance: number, point: Vector2, normal: Vector2): void;
         reset(): void;
+        clone(): RaycastHit;
         toString(): string;
     }
 }
@@ -3185,6 +3555,7 @@ declare module es {
          * 在碰撞器中开始的射线/直线是否强制转换检测到那些碰撞器
          */
         static raycastsStartInColliders: boolean;
+        static debugRender: boolean;
         /**
          * 我们保留它以避免在每次raycast发生时分配它
          */
@@ -3213,13 +3584,13 @@ declare module es {
          * @param results
          * @param layerMask
          */
-        static overlapCircleAll(center: Vector2, randius: number, results: any[], layerMask?: number): number;
+        static overlapCircleAll(center: Vector2, radius: number, results: Collider[], layerMask?: number): number;
         /**
          * 返回所有碰撞器与边界相交的碰撞器。bounds。请注意，这是一个broadphase检查，所以它只检查边界，不做单个碰撞到碰撞器的检查!
          * @param rect
          * @param layerMask
          */
-        static boxcastBroadphase(rect: Rectangle, layerMask?: number): Set<Collider>;
+        static boxcastBroadphase(rect: Rectangle, layerMask?: number): Collider[];
         /**
          * 返回所有被边界交错的碰撞器，但不包括传入的碰撞器（self）。
          * 如果你想为其他查询自己创建扫描边界，这个方法很有用
@@ -3227,13 +3598,13 @@ declare module es {
          * @param rect
          * @param layerMask
          */
-        static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Set<Collider>;
+        static boxcastBroadphaseExcludingSelf(collider: Collider, rect: Rectangle, layerMask?: number): Collider[];
         /**
          * 返回所有边界与 collider.bounds 相交的碰撞器，但不包括传入的碰撞器(self)
          * @param collider
          * @param layerMask
          */
-        static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask?: number): Set<Collider>;
+        static boxcastBroadphaseExcludingSelfNonRect(collider: Collider, layerMask?: number): Collider[];
         /**
          * 返回所有被 collider.bounds 扩展为包含 deltaX/deltaY 的碰撞器，但不包括传入的碰撞器（self）
          * @param collider
@@ -3241,7 +3612,7 @@ declare module es {
          * @param deltaY
          * @param layerMask
          */
-        static boxcastBroadphaseExcludingSelfDelta(collider: Collider, deltaX: number, deltaY: number, layerMask?: number): Set<Collider>;
+        static boxcastBroadphaseExcludingSelfDelta(collider: Collider, deltaX: number, deltaY: number, layerMask?: number): Collider[];
         /**
          * 将对撞机添加到物理系统中
          * @param collider
@@ -3263,7 +3634,7 @@ declare module es {
          * @param end
          * @param layerMask
          */
-        static linecast(start: Vector2, end: Vector2, layerMask?: number): RaycastHit;
+        static linecast(start: Vector2, end: Vector2, layerMask?: number, ignoredColliders?: Set<Collider>): RaycastHit;
         /**
          * 通过空间散列强制执行一行，并用该行命中的任何碰撞器填充hits数组
          * @param start
@@ -3271,7 +3642,7 @@ declare module es {
          * @param hits
          * @param layerMask
          */
-        static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number): number;
+        static linecastAll(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask?: number, ignoredColliders?: Set<Collider>): number;
         /**
          * 检查是否有对撞机落在一个矩形区域中
          * @param rect
@@ -3292,10 +3663,13 @@ declare module es {
      * 不是真正的射线(射线只有开始和方向)，作为一条线和射线。
      */
     class Ray2D {
-        start: Vector2;
-        end: Vector2;
-        direction: Vector2;
-        constructor(position: Vector2, end: Vector2);
+        readonly start: Vector2;
+        readonly direction: Vector2;
+        readonly end: Vector2;
+        constructor(pos: Vector2, end: Vector2);
+        private _start;
+        private _direction;
+        private _end;
     }
 }
 declare module es {
@@ -3321,7 +3695,7 @@ declare module es {
         /**
          * 保存所有数据的字典
          */
-        _cellDict: NumberDictionary;
+        _cellDict: NumberDictionary<Collider>;
         /**
          * 用于返回冲突信息的共享HashSet
          */
@@ -3351,7 +3725,7 @@ declare module es {
          * @param excludeCollider
          * @param layerMask
          */
-        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Set<Collider>;
+        aabbBroadphase(bounds: Rectangle, excludeCollider: Collider, layerMask: number): Collider[];
         /**
          * 通过空间散列投掷一条线，并将该线碰到的任何碰撞器填入碰撞数组
          * https://github.com/francisengelmann/fast_voxel_traversal/blob/master/main.cpp
@@ -3361,7 +3735,7 @@ declare module es {
          * @param hits
          * @param layerMask
          */
-        linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number): number;
+        linecast(start: Vector2, end: Vector2, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): number;
         /**
          * 获取所有在指定矩形范围内的碰撞器
          * @param rect
@@ -3392,15 +3766,15 @@ declare module es {
          */
         cellAtPosition(x: number, y: number, createCellIfEmpty?: boolean): Collider[];
     }
-    class NumberDictionary {
-        _store: Map<string, Collider[]>;
-        add(x: number, y: number, list: Collider[]): void;
+    class NumberDictionary<T> {
+        _store: Map<string, T[]>;
+        add(x: number, y: number, list: T[]): void;
         /**
          * 使用蛮力方法从字典存储列表中移除碰撞器
          * @param obj
          */
-        remove(obj: Collider): void;
-        tryGetValue(x: number, y: number): Collider[];
+        remove(obj: T): void;
+        tryGetValue(x: number, y: number): T[];
         getKey(x: number, y: number): string;
         /**
          * 清除字典数据
@@ -3416,7 +3790,8 @@ declare module es {
         _cellHits: RaycastHit[];
         _ray: Ray2D;
         _layerMask: number;
-        start(ray: Ray2D, hits: RaycastHit[], layerMask: number): void;
+        private _ignoredColliders;
+        start(ray: Ray2D, hits: RaycastHit[], layerMask: number, ignoredColliders: Set<Collider>): void;
         /**
          * 如果hits数组被填充，返回true。单元格不能为空!
          * @param cellX
@@ -3479,6 +3854,7 @@ declare module es {
          * @param isBox
          */
         constructor(points: Vector2[], isBox?: boolean);
+        create(vertCount: number, radius: number): void;
         _edgeNormals: Vector2[];
         /**
          * 边缘法线用于SAT碰撞检测。缓存它们用于避免squareRoots
@@ -3531,7 +3907,11 @@ declare module es {
          * @param distanceSquared
          * @param edgeNormal
          */
-        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2, distanceSquared: Ref<number>, edgeNormal: Vector2): Vector2;
+        static getClosestPointOnPolygonToPoint(points: Vector2[], point: Vector2): {
+            distanceSquared: number;
+            edgeNormal: Vector2;
+            closestPoint: Vector2;
+        };
         /**
          * 旋转原始点并复制旋转的值到旋转的点
          * @param radians
@@ -3587,6 +3967,7 @@ declare module es {
         overlaps(other: Shape): any;
         collidesWithShape(other: Shape, result: CollisionResult): boolean;
         collidesWithLine(start: Vector2, end: Vector2, hit: RaycastHit): boolean;
+        getPointAlongEdge(angle: number): Vector2;
         /**
          * 获取所提供的点是否在此范围内
          * @param point
@@ -3613,18 +3994,20 @@ declare module es {
          * 不是所有冲突类型都使用!在依赖这个字段之前，请检查ShapeCollisions切割类!
          */
         point: Vector2;
+        reset(): void;
+        cloneTo(cr: CollisionResult): void;
         /**
          * 改变最小平移向量，如果没有相同方向上的运动，它将移除平移的x分量。
          * @param deltaMovement
          */
-        removeHorizontal(deltaMovement: Vector2): void;
-        invertResult(): this;
+        removeHorizontalTranslation(deltaMovement: Vector2): void;
+        invertResult(): void;
         toString(): string;
     }
 }
 declare module es {
     class RealtimeCollisions {
-        static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: Ref<number>): boolean;
+        static intersectMovingCircleBox(s: Circle, b: Box, movement: Vector2, time: number): boolean;
         /**
          * 支持函数，返回索引为n的矩形vert
          * @param b
@@ -3656,6 +4039,7 @@ declare module es {
 }
 declare module es {
     class ShapeCollisionsCircle {
+        static circleToCircleCast(first: Circle, second: Circle, deltaMovement: Vector2, hit: RaycastHit): boolean;
         static circleToCircle(first: Circle, second: Circle, result?: CollisionResult): boolean;
         /**
          * 适用于中心在框内的圆，也适用于与框外中心重合的圆。
@@ -3698,7 +4082,10 @@ declare module es {
          * @param min
          * @param max
          */
-        static getInterval(axis: Vector2, polygon: Polygon, min: Ref<number>, max: Ref<number>): void;
+        static getInterval(axis: Vector2, polygon: Polygon): {
+            min: number;
+            max: number;
+        };
         /**
          * 计算[minA, maxA]和[minB, maxB]之间的距离。如果间隔重叠，距离是负的
          * @param minA
@@ -3706,7 +4093,147 @@ declare module es {
          * @param minB
          * @param maxB
          */
-        static intervalDistance(minA: number, maxA: number, minB: number, maxB: any): number;
+        static intervalDistance(minA: number, maxA: number, minB: number, maxB: number): number;
+    }
+}
+declare module es {
+    class Particle {
+        position: Vector2;
+        lastPosition: Vector2;
+        mass: number;
+        radius: number;
+        collidesWithColliders: boolean;
+        isPinned: boolean;
+        acceleration: Vector2;
+        pinnedPosition: Vector2;
+        constructor(position: {
+            x: number;
+            y: number;
+        });
+        applyForce(force: Vector2): void;
+        pin(): Particle;
+        pinTo(position: Vector2): Particle;
+        unpin(): Particle;
+    }
+}
+declare module es {
+    class VerletWorld {
+        gravity: Vector2;
+        constraintIterations: number;
+        maximumStepIterations: number;
+        simulationBounds: Rectangle;
+        allowDragging: boolean;
+        selectionRadiusSquared: number;
+        _draggedParticle: Particle;
+        _composites: Composite[];
+        static _colliders: Collider[];
+        _tempCircle: Circle;
+        _leftOverTime: number;
+        _fixedDeltaTime: number;
+        _iterationSteps: number;
+        _fixedDeltaTimeSq: number;
+        onHandleDrag: Function;
+        constructor(simulationBounds?: Rectangle);
+        update(): void;
+        constrainParticleToBounds(p: Particle): void;
+        handleCollisions(p: Particle, collidesWithLayers: number): void;
+        updateTiming(): void;
+        addComposite<T extends Composite>(composite: T): T;
+        removeComposite(composite: Composite): void;
+        handleDragging(): void;
+        getNearestParticle(position: Vector2): Particle;
+        debugRender(batcher: IBatcher): void;
+    }
+}
+declare module es {
+    class Composite {
+        friction: Vector2;
+        drawParticles: boolean;
+        drawConstraints: boolean;
+        collidesWithLayers: number;
+        particles: Particle[];
+        _constraints: Constraint[];
+        addParticle(particle: Particle): Particle;
+        removeParticle(particle: Particle): void;
+        removeAll(): void;
+        addConstraint<T extends Constraint>(constraint: T): T;
+        removeConstraint(constraint: Constraint): void;
+        applyForce(force: Vector2): void;
+        solveConstraints(): void;
+        updateParticles(deltaTimeSquared: number, gravity: Vector2): void;
+        handleConstraintCollisions(): void;
+        debugRender(batcher: IBatcher): void;
+    }
+}
+declare module es {
+    class Ball extends Composite {
+        constructor(position: Vector2, radius?: number);
+    }
+}
+declare module es {
+    class VerletBox extends es.Composite {
+        constructor(center: es.Vector2, width: number, height: number, borderStiffness?: number, diagonalStiffness?: number);
+    }
+}
+declare module es {
+    class LineSegments extends Composite {
+        constructor(vertices: Vector2[], stiffness: number);
+        pinParticleAtIndex(index: number): LineSegments;
+    }
+}
+declare module es {
+    abstract class Constraint {
+        composite: Composite;
+        collidesWithColliders: boolean;
+        abstract solve(): void;
+        handleCollisions(collidesWithLayers: number): void;
+        debugRender(batcher: IBatcher): void;
+    }
+}
+declare module es {
+    class AngleConstraint extends Constraint {
+        stiffness: number;
+        angleInRadius: number;
+        _particleA: Particle;
+        _centerParticle: Particle;
+        _particleC: Particle;
+        constructor(a: Particle, center: Particle, c: Particle, stiffness: number);
+        angleBetweenParticles(): number;
+        solve(): void;
+    }
+}
+declare module es {
+    class DistanceConstraint extends Constraint {
+        stiffness: number;
+        restingDistance: number;
+        tearSensitivity: number;
+        shouldApproximateCollisionsWithPoints: boolean;
+        totalPointsToApproximateCollisionsWith: number;
+        _particleOne: Particle;
+        _particleTwo: Particle;
+        static _polygon: Polygon;
+        constructor(first: Particle, second: Particle, stiffness: number, distance?: number);
+        static create(a: Particle, center: Particle, c: Particle, stiffness: number, angleInDegrees: number): DistanceConstraint;
+        setTearSensitivity(tearSensitivity: number): this;
+        setCollidesWithColliders(collidesWithColliders: boolean): this;
+        setShouldApproximateCollisionsWithPoints(shouldApproximateCollisionsWithPoints: boolean): this;
+        solve(): void;
+        handleCollisions(collidesWithLayers: number): void;
+        approximateCollisionsWithPoints(collidesWithLayers: number): void;
+        preparePolygonForCollisionChecks(midPoint: Vector2): void;
+        debugRender(batcher: IBatcher): void;
+    }
+}
+declare module es {
+    interface IAnimFrame {
+        t: number;
+        value: number;
+    }
+    class AnimCurve {
+        readonly points: IAnimFrame[];
+        constructor(points: IAnimFrame[]);
+        lerp(t: number): number;
+        _points: IAnimFrame[];
     }
 }
 declare module es {
@@ -3852,6 +4379,61 @@ declare module es {
      */
     interface IEquatable<T> {
         equals(other: T): boolean;
+    }
+}
+declare module es {
+    interface IListener {
+        caller: object;
+        callback: Function;
+    }
+    interface IObservable {
+        addListener(caller: object, callback: Function): any;
+        removeListener(caller: object, callback: Function): any;
+        clearListener(): any;
+        clearListenerWithCaller(caller: object): any;
+    }
+    class Observable implements IObservable {
+        constructor();
+        addListener(caller: object, callback: Function): void;
+        removeListener(caller: object, callback: Function): void;
+        clearListener(): void;
+        clearListenerWithCaller(caller: object): void;
+        notify(...args: any[]): void;
+        private _listeners;
+    }
+    class ObservableT<T> extends Observable {
+        addListener(caller: object, callback: (arg: T) => void): void;
+        removeListener(caller: object, callback: (arg: T) => void): void;
+        notify(arg: T): void;
+    }
+    class ObservableTT<T, R> extends Observable {
+        addListener(caller: object, callback: (arg1: T, arg2: R) => void): void;
+        removeListener(caller: object, callback: (arg: T, arg2: R) => void): void;
+        notify(arg1: T, arg2: R): void;
+    }
+    class Command implements IObservable {
+        constructor(caller: object, action: Function);
+        bindAction(caller: object, action: Function): void;
+        dispatch(...args: any[]): void;
+        addListener(caller: object, callback: Function): void;
+        removeListener(caller: object, callback: Function): void;
+        clearListener(): void;
+        clearListenerWithCaller(caller: object): void;
+        private _onExec;
+        private _caller;
+        private _action;
+    }
+    class ValueChangeCommand<T> implements IObservable {
+        constructor(value: T);
+        readonly onValueChange: Observable;
+        value: T;
+        dispatch(value: T): void;
+        addListener(caller: object, callback: Function): void;
+        removeListener(caller: object, callback: Function): void;
+        clearListener(): void;
+        clearListenerWithCaller(caller: object): void;
+        private _onValueChange;
+        private _value;
     }
 }
 declare module es {

@@ -16,17 +16,17 @@ export class LineCaster extends es.RenderableComponent implements es.IUpdatable 
     }
 
     public render(batcher: Batcher, camera: component_camera): void {
-        batcher.drawPixel(this._lastPosition, new Color(255, 255, 0), 4);
+        batcher.drawPixel(this._lastPosition, new es.Color(255, 255, 0), 4);
         batcher.end();
 
-        batcher.drawPixel(this.transform.position, new Color(255, 255, 255), 4);
+        batcher.drawPixel(this.transform.position, new es.Color(255, 255, 255), 4);
         batcher.end();
 
-        batcher.drawLine(this._lastPosition, this.transform.position, new Color(255, 255, 255), 2);
+        batcher.drawLine(this._lastPosition, this.transform.position, new es.Color(255, 255, 255), 2);
         batcher.end();
         
         if (this._collisionPosition.x > 0 && this._collisionPosition.y > 0) {
-            batcher.drawPixel(this._collisionPosition, new Color(255, 0, 0), 10);
+            batcher.drawPixel(this._collisionPosition, new es.Color(255, 0, 0), 10);
             batcher.end();
         }
     }
