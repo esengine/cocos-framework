@@ -1,5 +1,6 @@
 
 import { _decorator, Component, Node, Button, find, instantiate, Label, Prefab, resources, Toggle, ToggleComponent } from 'cc';
+import { PolygonSprite } from './components/PolygonSprite';
 import { Batcher } from './graphics/Batcher';
 import { Input } from './Input/Input';
 import { KeyboardUtils } from './Input/KeyboardUtils';
@@ -44,6 +45,7 @@ export class Main extends Component {
                 }, this);
             });
         });
+
     }
 
     update (deltaTime: number) {

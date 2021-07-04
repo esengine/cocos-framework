@@ -10,7 +10,7 @@
   "_techIdx": 0,
   "_defines": [
     {
-      "USE_TEXTURE": true
+      "USE_VERTEX_COLOR": true
     }
   ],
   "_states": [
@@ -25,6 +25,14 @@
     }
   ],
   "_props": [
-    {}
+    {
+      "color": {
+        "__type__": "cc.Color",
+        "r": 133,
+        "g": 65,
+        "b": 65,
+        "a": 255
+      }
+    }
   ]
 }

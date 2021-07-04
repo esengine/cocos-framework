@@ -9,6 +9,5 @@ export class PolygonMesh extends Mesh {
 
         this.setVertPositions(points);
         this.setTriangles(triangulator.triangleIndices);
-        this.recalculateBounds(true);
     }
 }

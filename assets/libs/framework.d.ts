@@ -4190,6 +4190,11 @@ declare module es {
     }
 }
 declare module es {
+    class Tire extends Composite {
+        constructor(origin: Vector2, radius: number, segments: number, spokeStiffness?: number, treadStiffness?: number);
+    }
+}
+declare module es {
     abstract class Constraint {
         composite: Composite;
         collidesWithColliders: boolean;

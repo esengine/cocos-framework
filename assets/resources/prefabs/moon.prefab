@@ -67,7 +67,6 @@
     "__prefab": {
       "__id__": 3
     },
-    "_priority": 0,
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 128,
@@ -107,7 +106,8 @@
       "a": 255
     },
     "_spriteFrame": {
-      "__uuid__": "f03eaeb0-0254-47d1-87c5-546745cb6cbd@f9941"
+      "__uuid__": "f03eaeb0-0254-47d1-87c5-546745cb6cbd@f9941",
+      "__expectedType__": "cc.SpriteFrame"
     },
     "_type": 0,
     "_fillType": 0,
