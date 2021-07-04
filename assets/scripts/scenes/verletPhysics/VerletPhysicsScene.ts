@@ -19,6 +19,12 @@ export class VerletPhysicsScene extends RenderScene {
         verletSystem.world.addComposite(new es.Tire(new es.Vector2(300, 16), 50, 4, 0.2, 0.7));
         verletSystem.world.addComposite(new es.Tire(new es.Vector2(450, 64), 64, 7, 0.1, 0.3));
 
+        verletSystem.world.addComposite(new es.Cloth(new es.Vector2(200, 200), 200, 200, 20, 0.25, 50));
+
+        verletSystem.world.addComposite(new es.Ragdoll(200, 20, es.RandomUtils.randint(140, 240)));
+        verletSystem.world.addComposite(new es.Ragdoll(250, 20, es.RandomUtils.randint(140, 240)));
+        verletSystem.world.addComposite(new es.Ragdoll(300, 20, es.RandomUtils.randint(140, 240)));
+
         verletSystem.world.addComposite(new es.Ball(new es.Vector2(100, 60), es.RandomUtils.randint(10, 50)));
         verletSystem.world.addComposite(new es.Ball(new es.Vector2(150, 60), es.RandomUtils.randint(10, 50)));
         verletSystem.world.addComposite(new es.Ball(new es.Vector2(200, 60), es.RandomUtils.randint(10, 50)));
