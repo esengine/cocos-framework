@@ -1,6 +1,6 @@
 import { Button, EventHandler, find, instantiate, Label, Prefab, resources, Sprite, Toggle, ToggleComponent } from "cc";
 import { component_camera as component_camera } from "../components/component_camera";
-import { component_sprite } from "../components/component_sprite";
+import { SpriteRenderer } from "../components/SpriteRenderer";
 
 export enum SceneEmitType {
     graphics_dirty

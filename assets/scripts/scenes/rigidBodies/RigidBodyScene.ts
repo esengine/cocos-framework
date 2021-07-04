@@ -1,6 +1,6 @@
 import { find, instantiate, Prefab, resources, Sprite, view } from "cc";
 import { component_camera } from "../../components/component_camera";
-import { component_sprite } from "../../components/component_sprite";
+import { SpriteRenderer } from "../../components/SpriteRenderer";
 import { RenderScene, sampleScene } from "../RenderScene";
 
 @sampleScene("RigidBody")
@@ -50,9 +50,9 @@ export class RigidBodyScene extends RenderScene {
             .setVelocity(velocity);
 
         let entity = this.createEntity(es.UUID.randomUUID());
-        entity.setPosition(position.x, position.y);
         let sprite = instantiate(texture).getComponent(Sprite)
-        if (sprite) entity.addComponent(new component_sprite(sprite));
+        if (sprite) entity.addComponent(new SpriteRenderer(sprite));
+        entity.setPosition(position.x, position.y);
         entity.addComponent(rigidBody);
         entity.addComponent(new es.CircleCollider());
 

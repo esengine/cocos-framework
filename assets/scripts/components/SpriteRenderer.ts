@@ -3,12 +3,12 @@ import { Batcher } from "../graphics/Batcher";
 import { SceneEmitType, RenderScene } from "../scenes/RenderScene";
 import { component_camera } from "./component_camera";
 
-export class component_sprite extends es.RenderableComponent implements es.IUpdatable {
+export class SpriteRenderer extends es.RenderableComponent {
     public getbounds() {
         if (this._areBoundsDirty) {
             if (this._sprite.spriteFrame != null) {
                 this._bounds.calculateBounds(this.entity.transform.position, this._localOffset, this._origin,
-                    this.entity.transform.scale, this.entity.transform.rotation, 
+                    this.entity.transform.scale, this.entity.transform.rotation,
                     this.getwidth(), this.getheight());
             }
             this._areBoundsDirty = false;
@@ -62,6 +62,12 @@ export class component_sprite extends es.RenderableComponent implements es.IUpda
     public set originNormalized(value: es.Vector2) {
         this.setOrigin(new es.Vector2(value.x * this.getwidth() / this.entity.transform.scale.x,
             value.y * this.getheight() / this.entity.transform.scale.y));
+
+        const ui_transform = this._sprite.getComponent(UITransform);
+        if (ui_transform) {
+            const originNormalized = new Vec2(value.x, value.y)
+            ui_transform.anchorPoint = originNormalized;
+        }
     }
 
     protected _origin: es.Vector2 = new es.Vector2();
@@ -74,8 +80,9 @@ export class component_sprite extends es.RenderableComponent implements es.IUpda
 
     onAddedToEntity() {
         super.onAddedToEntity();
-        if (!this._sprite.node.parent)
+        if (!this._sprite.node.parent) {
             find('Canvas')?.addChild(this._sprite.node);
+        }
     }
 
     onRemovedFromEntity() {
@@ -97,53 +104,28 @@ export class component_sprite extends es.RenderableComponent implements es.IUpda
                     this._origin = newOrigin;
                 }
             }
-        } 
+        }
         return this;
     }
 
-    
-    update() {
+    onEntityTransformChanged(comp: es.ComponentTransform) {
         if (!this._sprite)
             return;
 
-        if (!this._sprite.node.parent)
-            return;
-
-        let dirty = false;
-
-        const ui_transform = this._sprite.getComponent(UITransform);
-        if (ui_transform) {
-            const originNormalized = new Vec2(this.originNormalized.x, this.originNormalized.y)
-            if (!ui_transform.anchorPoint.equals(originNormalized)) {
-                ui_transform.anchorPoint = originNormalized;
-                dirty = true;
-            }
-        }
-
-        const pos = es.Vector2.add(this.entity.transform.position, this.localOffset);
-        const newPos = new Vec3(pos.x, pos.y, 0);
-        if (!this._sprite.node.position.equals(newPos)) {
-            this._sprite.node.setPosition(newPos.x, newPos.y, 0);
-            dirty = true;
-        }
-
-        if (this._sprite.node.eulerAngles.z != this.entity.transform.rotationDegrees) {
-            this._sprite.node.setRotationFromEuler(new Vec3(0, 0, this.entity.transform.rotationDegrees));
-            dirty = true;
-        }
-        
-        const newScale = new Vec3(this.entity.transform.scale.x, this.entity.transform.scale.y, 1);
-        if (!this._sprite.node.scale.equals(newScale)) {
-            this._sprite.node.setScale(newScale);
-            dirty = true;
-        }
-
-        if (dirty) {
-            this._areBoundsDirty = true;
+        switch (comp) {
+            case es.ComponentTransform.position:
+                this._sprite.node.setPosition(this.entity.position.x, this.entity.position.y, 0);
+                break;
+            case es.ComponentTransform.rotation:
+                this._sprite.node.setRotationFromEuler(0, 0, this.entity.rotationDegrees);
+                break;
+            case es.ComponentTransform.scale:
+                this._sprite.node.setScale(new Vec3(this.entity.scale.x, this.entity.scale.y, 1));
+                break;
         }
     }
 
     public render(batcher: Batcher, camera: component_camera): void {
-        
+
     }
 }

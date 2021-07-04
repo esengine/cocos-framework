@@ -1,5 +1,5 @@
 import { resources, Prefab, instantiate, Sprite, BoxCollider } from "cc";
-import { component_sprite } from "../../components/component_sprite";
+import { SpriteRenderer } from "../../components/SpriteRenderer";
 import { RenderScene, sampleScene } from "../RenderScene";
 import { LineCaster } from "./LineCaster";
 
@@ -10,12 +10,12 @@ export class LineCastingScene extends RenderScene {
         resources.load('prefabs/moon', Prefab, (err, data)=>{
             let moonTex = instantiate(data).getComponent(Sprite);
             if (moonTex) {
-                playerEntity.addComponent(new component_sprite(moonTex))
+                playerEntity.addComponent(new SpriteRenderer(moonTex))
                 if (moonTex.spriteFrame) 
                     playerEntity.addComponent(new es.BoxCollider());
             }
+            playerEntity.setPosition(200, 100);
         });
-        playerEntity.setPosition(200, 100);
 
 
         let lineCaster = this.createEntity("linecaster")

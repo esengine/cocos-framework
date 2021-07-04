@@ -31,7 +31,6 @@ CCEffect %{
 CCProgram unlit-fs %{
   precision highp float;
   #include <output>
-  #include <cc-fog>
 
   in vec2 v_uv;
   uniform sampler2D mainTexture;
