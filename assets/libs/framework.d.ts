@@ -433,7 +433,6 @@ declare module es {
         tweenLocalRotationDegreesTo(to: number, duration?: number): TransformVector2Tween;
         compareTo(other: Entity): number;
         equals(other: Entity): boolean;
-        getHashCode(): number;
         toString(): string;
     }
 }
@@ -1314,7 +1313,7 @@ declare module es {
     }
 }
 declare module es {
-    abstract class Collider extends Component {
+    class Collider extends Component {
         static readonly lateSortOrder: number;
         castSortOrder: number;
         /**
@@ -2189,7 +2188,7 @@ declare module es {
         /** 自场景加载以来的总时间 */
         static timeSinceSceneLoad: number;
         private static _lastTime;
-        static update(currentTime: number): void;
+        static update(currentTime: number, useEngineTime: boolean): void;
         static sceneChanged(): void;
         /**
          * 允许在间隔检查。只应该使用高于delta的间隔值，否则它将始终返回true。
@@ -2721,6 +2720,10 @@ declare module es {
          * @param self
          */
         static invertFlags(self: Ref<number>): void;
+        /**
+         * 打印 number 的二进制表示。 方便调试 number 标志
+         */
+        static binaryStringRepresentation(self: number, leftPadWidth?: number): string;
     }
 }
 declare module es {
@@ -3470,6 +3473,7 @@ declare module es {
          * 它将处理任何与Collider重叠的ITriggerListeners。
          */
         update(): void;
+        private getColliders;
         private checkForExitedColliders;
         private notifyTriggerListeners;
     }
@@ -4946,10 +4950,6 @@ declare module es {
          * @param other
          */
         equals(other: any): boolean;
-        /**
-         * 生成对象的哈希码
-         */
-        getHashCode(): number;
     }
 }
 declare module es {
@@ -5328,38 +5328,50 @@ declare module es {
          * 预热缓存，使用最大的cacheCount对象填充缓存
          * @param cacheCount
          */
-        static warmCache(cacheCount: number): void;
+        static warmCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
          */
-        static trimCache(cacheCount: any): void;
+        static trimCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
          * 清除缓存
          */
-        static clearCache(): void;
+        static clearCache<T>(type: new (...args: any[]) => T): void;
         /**
          * 如果可以的话，从堆栈中弹出一个项
          */
-        static obtain<T>(): T[];
+        static obtain<T>(type: new (...args: any[]) => T): T[];
         /**
          * 将项推回堆栈
          * @param obj
          */
-        static free<T>(obj: Array<T>): void;
+        static free<T>(type: new (...args: any[]) => T, obj: Array<T>): void;
+        private static checkCreate;
     }
 }
 declare module es {
     /**
      * 用于管理一对对象的简单DTO
      */
-    class Pair<T> implements IEqualityComparable {
+    class Pair<T> {
         first: T;
         second: T;
         constructor(first: T, second: T);
         clear(): void;
         equals(other: Pair<T>): boolean;
-        getHashCode(): number;
+    }
+}
+declare module es {
+    class PairSet<T> {
+        readonly all: Array<Pair<T>>;
+        has(pair: Pair<T>): boolean;
+        add(pair: Pair<T>): void;
+        remove(pair: Pair<T>): void;
+        clear(): void;
+        union(other: PairSet<T>): void;
+        except(other: PairSet<T>): void;
+        private _all;
     }
 }
 declare module es {
@@ -5378,11 +5390,11 @@ declare module es {
          * 将缓存修剪为cacheCount项目
          * @param cacheCount
          */
-        static trimCache(cacheCount: number): void;
+        static trimCache<T>(type: new (...args: any[]) => T, cacheCount: number): void;
         /**
          * 清除缓存
          */
-        static clearCache(): void;
+        static clearCache<T>(type: new (...args: any[]) => T): void;
         /**
          * 如果可以的话，从堆栈中弹出一个项
          */
@@ -5391,7 +5403,8 @@ declare module es {
          * 将项推回堆栈
          * @param obj
          */
-        static free<T>(obj: T): void;
+        static free<T>(type: new (...args: any[]) => T, obj: T): void;
+        private static checkCreate;
     }
     interface IPoolable {
         /**
@@ -5400,78 +5413,6 @@ declare module es {
         reset(): any;
     }
     var isIPoolable: (props: any) => props is IPoolable;
-}
-declare module es {
-    interface ISet<T> {
-        add(item: T): boolean;
-        remove(item: T): boolean;
-        contains(item: T): boolean;
-        getCount(): number;
-        clear(): void;
-        toArray(): Array<T>;
-        /**
-         * 从当前集合中删除指定集合中的所有元素
-         * @param other
-         */
-        exceptWith(other: Array<T>): void;
-        /**
-         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
-         * @param other
-         */
-        intersectWith(other: Array<T>): void;
-        /**
-         * 修改当前的集合对象，使其包含所有存在于自身、指定集合中的元素，或者两者都包含
-         * @param other
-         */
-        unionWith(other: Array<T>): void;
-        isSubsetOf(other: Array<T>): boolean;
-        isSupersetOf(other: Array<T>): boolean;
-        overlaps(other: Array<T>): boolean;
-        setEquals(other: Array<T>): boolean;
-    }
-    abstract class Set<T> implements ISet<T> {
-        protected buckets: T[][];
-        protected count: number;
-        constructor(source?: Array<T>);
-        abstract getHashCode(item: T): number;
-        abstract areEqual(value1: T, value2: T): boolean;
-        add(item: T): boolean;
-        remove(item: T): boolean;
-        contains(item: T): boolean;
-        getCount(): number;
-        clear(): void;
-        toArray(): T[];
-        /**
-         * 从当前集合中删除指定集合中的所有元素
-         * @param other
-         */
-        exceptWith(other: Array<T>): void;
-        /**
-         * 修改当前Set对象，使其只包含该对象和指定数组中的元素
-         * @param other
-         */
-        intersectWith(other: Array<T>): void;
-        unionWith(other: Array<T>): void;
-        /**
-         * 确定当前集合是否为指定集合或数组的子集
-         * @param other
-         */
-        isSubsetOf(other: Array<T>): boolean;
-        /**
-         * 确定当前不可变排序集是否为指定集合的超集
-         * @param other
-         */
-        isSupersetOf(other: Array<T>): boolean;
-        overlaps(other: Array<T>): boolean;
-        setEquals(other: Array<T>): boolean;
-        private buildInternalBuckets;
-        private bucketsContains;
-    }
-    class HashSet<T extends IEqualityComparable> extends Set<T> {
-        constructor(source?: Array<T>);
-        getHashCode(item: T): number;
-        areEqual(value1: T, value2: T): boolean;
-    }
 }
 declare module es {
     /**
@@ -5673,7 +5614,7 @@ declare module es {
          * @param list
          * @param itemCount 从列表中返回的随机项目的数量
          */
-        static randomItems<T>(list: T[], itemCount: number): T[];
+        static randomItems<T>(type: any, list: T[], itemCount: number): T[];
     }
 }
 declare module es {
